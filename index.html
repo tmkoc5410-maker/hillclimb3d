@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Hill Climb 3D Pro: Infinite Extreme Off-Road</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js (r128) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&family=Rajdhani:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --neon-amber: #f59e0b;
+            --neon-emerald: #10b981;
+            --neon-cyan: #06b6d4;
+            --neon-rose: #f43f5e;
+            --neon-purple: #a855f7;
+        }
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Rajdhani', sans-serif;
+            background-color: #030712;
+            color: #f8fafc;
+            touch-action: none;
+        }
+        
+        /* Simulated Mobile 90-Degree Landscape Rotation */
+        body.force-landscape {
+            transform: rotate(90deg);
+            transform-origin: top left;
+            position: absolute;
+            top: 0;
+            left: 100vw;
+            width: 100vh !important;
+            height: 100vw !important;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .font-racing {
+            font-family: 'Chakra Petch', sans-serif;
+        }
+        .font-tech {
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(11, 17, 32, 0.82);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.2s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(245, 158, 11, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Pedals 3D Styling */
+        .pedal-btn {
+            perspective: 500px;
+            transform-style: preserve-3d;
+            transition: transform 0.08s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.08s ease, filter 0.08s ease;
+            transform-origin: bottom center;
+        }
+        .pedal-btn:active, .pedal-btn.active-pedal {
+            transform: perspective(400px) rotateX(24deg) translateY(4px) scale(0.96);
+            filter: brightness(1.25);
+        }
+
+        /* Pulsing Play Button Glow */
+        @keyframes playPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 25px rgba(245, 158, 11, 0.5); }
+            50% { transform: scale(1.03); box-shadow: 0 0 45px rgba(245, 158, 11, 0.85); }
+        }
+        .play-btn-glow {
+            animation: playPulse 2.2s infinite ease-in-out;
+        }
+
+        /* Nitro Ready Pulse */
+        @keyframes nitroPulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.5), inset 0 0 10px rgba(6, 182, 212, 0.4); }
+            50% { box-shadow: 0 0 32px rgba(59, 130, 246, 0.85), inset 0 0 18px rgba(14, 165, 233, 0.7); }
+        }
+        .nitro-ready {
+            animation: nitroPulse 1.8s infinite;
+        }
+
+        /* Floating Stunt Animation */
+        @keyframes stuntPop {
+            0% { transform: translate(-50%, 20px) scale(0.7); opacity: 0; }
+            30% { transform: translate(-50%, -10px) scale(1.15); opacity: 1; }
+            70% { transform: translate(-50%, -15px) scale(1.0); opacity: 1; }
+            100% { transform: translate(-50%, -50px) scale(0.85); opacity: 0; }
+        }
+        .stunt-popup-anim {
+            animation: stuntPop 1.3s forwards cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+
+        /* Weather Lightning Strobe */
+        @keyframes thunderFlash {
+            0%, 94%, 98%, 100% { opacity: 0; }
+            95%, 97% { opacity: 0.75; }
+        }
+        .thunder-flash-overlay {
+            animation: thunderFlash 9s infinite ease-in-out;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        ::-webkit-scrollbar-thumb { background: rgba(245, 158, 11, 0.6); border-radius: 4px; }
+    </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden select-none">
+
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <!-- Atmospheric Thunder Flash Overlay -->
+    <div id="lightning-overlay" class="absolute inset-0 bg-white pointer-events-none z-10 opacity-0 transition-opacity"></div>
+
+    <!-- ==================================================== -->
+    <!-- 1. HOME SCREEN / MAIN MENU INTERFACE -->
+    <!-- ==================================================== -->
+    <div id="screen-home" class="fixed inset-0 z-30 flex flex-col justify-between p-3 sm:p-6 pointer-events-none transition-all duration-300">
+        
+        <!-- Top Bar -->
+        <div class="flex justify-between items-start pointer-events-auto">
+            <!-- Brand Logo -->
+            <div class="glass-panel px-3.5 py-2 rounded-2xl flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                    <i class="fa-solid fa-truck-monster text-white text-lg sm:text-xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-racing font-bold text-white text-base sm:text-lg tracking-wider uppercase leading-none">
+                            Hill Climb <span class="text-amber-400">3D</span>
+                        </span>
+                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">INFINITE</span>
+                    </div>
+                    <span class="text-[11px] font-medium text-slate-400">Endless High-Hills Sandbox</span>
+                </div>
+            </div>
+
+            <!-- Wallet & Quick Actions -->
+            <div class="flex items-center gap-2">
+                <!-- Coins Pill -->
+                <div class="glass-panel px-3.5 py-2 rounded-2xl flex items-center gap-2 border-amber-500/30 shadow-lg shadow-amber-500/10">
+                    <div class="w-6 h-6 rounded-full bg-gradient-to-b from-yellow-300 to-amber-500 flex items-center justify-center text-slate-950 font-bold text-xs shadow-md">
+                        <i class="fa-solid fa-coins"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[9px] uppercase tracking-wider text-amber-200/80 leading-none font-bold">Coins</span>
+                        <span id="home-coins" class="font-racing font-bold text-yellow-300 text-base leading-tight">0</span>
+                    </div>
+                </div>
+
+                <!-- Screen Rotation Button (Mobile Friendly!) -->
+                <button id="btn-rotate-home" class="glass-panel hover:bg-slate-800 active:scale-95 text-amber-400 p-2.5 sm:px-3 sm:py-2 rounded-2xl shadow-md transition flex items-center gap-1.5 font-racing font-bold text-xs" title="Rotate Screen (Landscape/Portrait)">
+                    <i class="fa-solid fa-mobile-screen-button text-base sm:rotate-90"></i>
+                    <span class="hidden sm:inline">Rotate Screen</span>
+                </button>
+
+                <!-- Audio Toggle -->
+                <button id="btn-home-sound" class="glass-panel hover:bg-slate-800 text-slate-200 p-2.5 rounded-2xl shadow transition" title="Sound Mute/Unmute">
+                    <i id="home-sound-icon" class="fa-solid fa-volume-high text-amber-400 text-base"></i>
+                </button>
+
+                <!-- Fullscreen Toggle -->
+                <button id="btn-home-fullscreen" class="glass-panel hover:bg-slate-800 text-slate-200 p-2.5 rounded-2xl shadow transition" title="Toggle Fullscreen">
+                    <i class="fa-solid fa-expand text-slate-300 text-base"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Showcase Label -->
+        <div class="flex flex-col items-center justify-center text-center pointer-events-auto">
+            <span class="text-[11px] font-racing font-bold uppercase tracking-widest text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3.5 py-1 rounded-full mb-2">
+                3D Infinite Procedural Hills & Bridges
+            </span>
+            <h1 class="font-racing font-black text-3xl sm:text-5xl text-white tracking-wider uppercase drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)]">
+                Conquer <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500">Extreme Heights</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-300 max-w-md mt-1 drop-shadow">
+                Endless mountain ascents, dynamic weather cycles, fuel canisters, and mega stunt bridges!
+            </p>
+
+            <!-- Big Glowing PLAY / START RACE Button -->
+            <button id="btn-main-play" class="play-btn-glow mt-6 sm:mt-8 px-10 sm:px-14 py-4 sm:py-5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 active:scale-95 text-slate-950 font-racing font-black text-xl sm:text-2xl rounded-2xl shadow-2xl tracking-wider uppercase transition flex items-center gap-3.5">
+                <i class="fa-solid fa-play text-xl sm:text-2xl"></i>
+                <span>Drive Infinite</span>
+            </button>
+        </div>
+
+        <!-- Bottom Action Cards -->
+        <div class="grid grid-cols-3 gap-2.5 sm:gap-4 max-w-2xl mx-auto w-full pointer-events-auto">
+            <!-- Garage Card -->
+            <button id="btn-home-garage" class="glass-card p-3 sm:p-4 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-center group">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-lg group-hover:scale-110 transition">
+                    <i class="fa-solid fa-wrench"></i>
+                </div>
+                <span class="font-racing font-bold text-xs sm:text-sm text-white uppercase tracking-wider">Garage & Cars</span>
+                <span id="home-vehicle-name" class="text-[10px] text-slate-400">Crawler 4x4</span>
+            </button>
+
+            <!-- Weather Card -->
+            <button id="btn-home-weather" class="glass-card p-3 sm:p-4 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-center group">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 text-lg group-hover:scale-110 transition">
+                    <i id="home-weather-icon" class="fa-solid fa-cloud-sun"></i>
+                </div>
+                <span class="font-racing font-bold text-xs sm:text-sm text-white uppercase tracking-wider">Weather Cycle</span>
+                <span id="home-weather-name" class="text-[10px] text-cyan-300">Sunny Dunes</span>
+            </button>
+
+            <!-- Stats Card -->
+            <button id="btn-home-stats" class="glass-card p-3 sm:p-4 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-center group">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-lg group-hover:scale-110 transition">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <span class="font-racing font-bold text-xs sm:text-sm text-white uppercase tracking-wider">High Records</span>
+                <span id="home-best-distance" class="text-[10px] text-amber-300">0 m</span>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- 2. GARAGE & VEHICLE CUSTOMIZER MODAL -->
+    <!-- ==================================================== -->
+    <div id="modal-garage" class="hidden fixed inset-0 z-40 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+        <div class="glass-panel w-full max-w-2xl max-h-[90vh] rounded-3xl p-5 sm:p-7 flex flex-col gap-5 border border-amber-500/30 shadow-2xl overflow-y-auto">
+            
+            <div class="flex justify-between items-center border-b border-slate-700/80 pb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-lg">
+                        <i class="fa-solid fa-wrench"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-racing font-bold text-xl sm:text-2xl text-white tracking-wider uppercase">Custom Garage</h2>
+                        <p class="text-xs text-slate-400">Upgrade parts, choose off-road models & paint</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 rounded-xl border border-amber-500/30">
+                        <i class="fa-solid fa-coins text-yellow-400 text-sm"></i>
+                        <span id="garage-coins" class="font-racing font-bold text-yellow-300 text-sm">0</span>
+                    </div>
+                    <button id="btn-close-garage" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-sm transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vehicle Models Carousel -->
+            <div class="flex flex-col gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Vehicle Models</span>
+                <div class="grid grid-cols-3 gap-2.5">
+                    <button data-vehicle="0" class="vehicle-select-btn p-3 rounded-2xl bg-slate-900 border-2 border-amber-500 flex flex-col items-center gap-1 transition">
+                        <i class="fa-solid fa-truck-pickup text-xl text-amber-400"></i>
+                        <span class="font-racing font-bold text-xs text-white">Crawler 4x4</span>
+                        <span class="text-[9px] text-slate-400">Balanced Rig</span>
+                    </button>
+
+                    <button data-vehicle="1" class="vehicle-select-btn p-3 rounded-2xl bg-slate-900 border-2 border-transparent hover:border-slate-600 flex flex-col items-center gap-1 transition">
+                        <i class="fa-solid fa-car-side text-xl text-slate-400"></i>
+                        <span class="font-racing font-bold text-xs text-white">Dune Buggy</span>
+                        <span class="text-[9px] text-slate-400">Air Flip Agility</span>
+                    </button>
+
+                    <button data-vehicle="2" class="vehicle-select-btn p-3 rounded-2xl bg-slate-900 border-2 border-transparent hover:border-slate-600 flex flex-col items-center gap-1 transition">
+                        <i class="fa-solid fa-truck-monster text-xl text-slate-400"></i>
+                        <span class="font-racing font-bold text-xs text-white">Monster Crusher</span>
+                        <span class="text-[9px] text-slate-400">Huge Mountain Tires</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Paint Finishes -->
+            <div class="flex flex-col gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Metallic Paint Swatches</span>
+                <div class="grid grid-cols-6 gap-2 sm:gap-3">
+                    <button data-color="0xe11d48" class="paint-chip h-10 rounded-xl bg-rose-600 border-2 border-white ring-2 ring-rose-500/50 shadow"></button>
+                    <button data-color="0x0ea5e9" class="paint-chip h-10 rounded-xl bg-sky-500 border-2 border-transparent hover:border-white shadow"></button>
+                    <button data-color="0x10b981" class="paint-chip h-10 rounded-xl bg-emerald-500 border-2 border-transparent hover:border-white shadow"></button>
+                    <button data-color="0xf59e0b" class="paint-chip h-10 rounded-xl bg-amber-500 border-2 border-transparent hover:border-white shadow"></button>
+                    <button data-color="0x8b5cf6" class="paint-chip h-10 rounded-xl bg-purple-500 border-2 border-transparent hover:border-white shadow"></button>
+                    <button data-color="0x18181b" class="paint-chip h-10 rounded-xl bg-zinc-900 border-2 border-transparent hover:border-white shadow"></button>
+                </div>
+            </div>
+
+            <!-- Upgrades Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div class="bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between gap-2.5">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-gears text-amber-400 text-base"></i>
+                            <div>
+                                <h3 class="font-racing font-bold text-white text-xs">V8 Engine & Torque</h3>
+                                <p class="text-[10px] text-slate-400">+Acceleration & High Hills Torque</p>
+                            </div>
+                        </div>
+                        <span id="level-engine" class="font-racing text-xs font-bold text-amber-400">LVL 1/5</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div id="bar-engine" class="h-full bg-amber-500 rounded-full" style="width: 20%;"></div>
+                        </div>
+                        <button id="btn-upg-engine" class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-racing font-bold text-xs rounded-xl shadow transition flex items-center gap-1">
+                            <span>Upgrade</span>
+                            <span class="text-[9px] bg-slate-950/20 px-1 rounded">50 ¢</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between gap-2.5">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-compress text-sky-400 text-base"></i>
+                            <div>
+                                <h3 class="font-racing font-bold text-white text-xs">High Altitude Suspension</h3>
+                                <p class="text-[10px] text-slate-400">+Big Drop Landing Dampening</p>
+                            </div>
+                        </div>
+                        <span id="level-suspension" class="font-racing text-xs font-bold text-sky-400">LVL 1/5</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div id="bar-suspension" class="h-full bg-sky-500 rounded-full" style="width: 20%;"></div>
+                        </div>
+                        <button id="btn-upg-suspension" class="px-3 py-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-racing font-bold text-xs rounded-xl shadow transition flex items-center gap-1">
+                            <span>Upgrade</span>
+                            <span class="text-[9px] bg-slate-950/20 px-1 rounded">50 ¢</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between gap-2.5">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-circle-notch text-emerald-400 text-base"></i>
+                            <div>
+                                <h3 class="font-racing font-bold text-white text-xs">Monster Rock Tires</h3>
+                                <p class="text-[10px] text-slate-400">+Extreme Incline Grip</p>
+                            </div>
+                        </div>
+                        <span id="level-tires" class="font-racing text-xs font-bold text-emerald-400">LVL 1/5</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div id="bar-tires" class="h-full bg-emerald-500 rounded-full" style="width: 20%;"></div>
+                        </div>
+                        <button id="btn-upg-tires" class="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-racing font-bold text-xs rounded-xl shadow transition flex items-center gap-1">
+                            <span>Upgrade</span>
+                            <span class="text-[9px] bg-slate-950/20 px-1 rounded">50 ¢</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between gap-2.5">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-fire text-cyan-400 text-base"></i>
+                            <div>
+                                <h3 class="font-racing font-bold text-white text-xs">Nitro Boost Supercharger</h3>
+                                <p class="text-[10px] text-slate-400">+Boost Duration & Recharge</p>
+                            </div>
+                        </div>
+                        <span id="level-nitro" class="font-racing text-xs font-bold text-cyan-400">LVL 1/5</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div id="bar-nitro" class="h-full bg-cyan-500 rounded-full" style="width: 20%;"></div>
+                        </div>
+                        <button id="btn-upg-nitro" class="px-3 py-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-racing font-bold text-xs rounded-xl shadow transition flex items-center gap-1">
+                            <span>Upgrade</span>
+                            <span class="text-[9px] bg-slate-950/20 px-1 rounded">50 ¢</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button id="btn-garage-done" class="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 text-slate-950 font-racing font-bold text-sm rounded-xl shadow-lg transition">
+                    Ready to Race!
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- 3. IN-GAME RACING HUD & INSTRUMENTS -->
+    <!-- ==================================================== -->
+    <div id="screen-game-hud" class="hidden fixed inset-0 z-20 pointer-events-none">
+        
+        <!-- Top HUD Row -->
+        <div class="p-3 sm:p-5 flex justify-between items-start gap-2">
+            
+            <!-- Left: Telemetry, Coins & Live Radar -->
+            <div class="flex flex-col gap-2 pointer-events-auto">
+                <div class="flex items-center gap-2">
+                    <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                        <i id="hud-weather-icon" class="fa-solid fa-cloud-sun text-amber-400 text-xs"></i>
+                        <span id="hud-weather-label" class="font-racing font-bold text-xs text-white uppercase">Sunny</span>
+                    </div>
+
+                    <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-1.5 border-amber-500/30">
+                        <i class="fa-solid fa-coins text-yellow-400 text-xs"></i>
+                        <span id="hud-coins" class="font-racing font-bold text-yellow-300 text-sm">0</span>
+                    </div>
+                </div>
+
+                <!-- Live Dynamic Shifting Radar -->
+                <div class="glass-panel px-3 py-1.5 rounded-2xl flex flex-col gap-1 w-56 sm:w-72 shadow-xl">
+                    <div class="flex justify-between items-center text-[10px] font-semibold text-slate-300 uppercase">
+                        <span class="flex items-center gap-1 text-amber-400">
+                            <i class="fa-solid fa-mountain"></i> Next 300m
+                        </span>
+                        <span id="hud-track-distance" class="text-amber-300 font-bold">0 m</span>
+                    </div>
+                    <div class="relative w-full h-7 bg-slate-950/80 rounded-lg overflow-hidden border border-slate-700/60">
+                        <canvas id="radar-canvas" width="300" height="28" class="w-full h-full"></canvas>
+                        <div id="radar-player-dot" class="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-amber-400 border border-white shadow-[0_0_8px_#f59e0b] -translate-x-1/2 transition-all duration-75" style="left: 10%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Screen Rotation, Weather, Camera & Pause -->
+            <div class="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+                <!-- Rotate Screen Button (Landscape/Portrait) -->
+                <button id="btn-rotate-hud" class="glass-panel hover:bg-slate-800 text-amber-400 px-3 py-2 rounded-xl text-xs font-bold shadow transition flex items-center gap-1" title="Rotate Screen / Landscape Mode">
+                    <i class="fa-solid fa-mobile-screen-button text-sm sm:rotate-90"></i>
+                    <span class="hidden sm:inline">Rotate</span>
+                </button>
+
+                <!-- Weather Cycle Button -->
+                <button id="btn-weather" class="glass-panel hover:bg-slate-800 text-cyan-300 px-3 py-2 rounded-xl text-xs font-semibold shadow transition flex items-center gap-1" title="Change Weather (Sunny, Rain, Snow, Sandstorm)">
+                    <i class="fa-solid fa-cloud-bolt"></i>
+                    <span class="hidden sm:inline">Weather</span>
+                </button>
+
+                <!-- Camera Switcher -->
+                <button id="btn-camera" class="glass-panel hover:bg-slate-800 text-slate-100 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1 shadow transition">
+                    <i class="fa-solid fa-video text-cyan-400"></i>
+                    <span id="camera-label" class="hidden sm:inline">Side Cam</span>
+                </button>
+
+                <!-- Headlights -->
+                <button id="btn-lights" class="glass-panel hover:bg-slate-800 text-slate-200 px-2.5 py-2 rounded-xl text-xs font-semibold shadow transition" title="Toggle Headlights">
+                    <i class="fa-solid fa-lightbulb text-amber-300"></i>
+                </button>
+
+                <!-- Pause Menu -->
+                <button id="btn-pause" class="glass-panel hover:bg-slate-800 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold shadow transition flex items-center gap-1">
+                    <i class="fa-solid fa-pause text-amber-400"></i>
+                    <span class="hidden sm:inline">Pause</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Center Cockpit Instruments -->
+        <div class="absolute bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
+            <div class="glass-panel px-4 py-2.5 rounded-3xl flex items-center gap-4 sm:gap-6 shadow-2xl border-slate-700/60">
+                
+                <!-- Incline Pitch Sensor -->
+                <div class="flex flex-col items-center text-center">
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Pitch</span>
+                    <div class="relative w-8 h-8 flex items-center justify-center my-0.5">
+                        <div id="incline-disc" class="w-7 h-7 rounded-full border border-dashed border-sky-400/60 flex items-center justify-center transition-transform duration-75">
+                            <i class="fa-solid fa-caret-up text-sky-400 text-xs"></i>
+                        </div>
+                    </div>
+                    <span id="stat-pitch" class="font-racing font-bold text-xs text-sky-300">0°</span>
+                </div>
+
+                <!-- Digital Speedometer -->
+                <div class="flex flex-col items-center justify-center min-w-[90px] sm:min-w-[110px] text-center">
+                    <div class="flex items-baseline justify-center gap-1">
+                        <span id="stat-speed" class="font-racing font-extrabold text-3xl sm:text-4xl text-emerald-400 tracking-tight leading-none drop-shadow-[0_2px_12px_rgba(16,185,129,0.4)]">0</span>
+                        <span class="font-racing text-[10px] font-bold text-slate-400">KM/H</span>
+                    </div>
+                    <div class="w-20 sm:w-24 h-1.5 bg-slate-900 rounded-full mt-1.5 overflow-hidden border border-slate-800 p-0.5">
+                        <div id="speed-meter-bar" class="h-full bg-gradient-to-r from-emerald-500 via-yellow-400 to-rose-500 rounded-full transition-all duration-75" style="width: 0%;"></div>
+                    </div>
+                    <div class="flex items-center gap-1 mt-1 text-[9px] font-racing font-bold text-slate-500">
+                        <span id="gear-r">R</span>
+                        <span id="gear-n" class="text-white">N</span>
+                        <span id="gear-1">1</span>
+                        <span id="gear-2">2</span>
+                        <span id="gear-3">3</span>
+                        <span id="gear-4">4</span>
+                        <span id="gear-boost" class="text-cyan-400 hidden">BOOST</span>
+                    </div>
+                </div>
+
+                <!-- Full Fuel Canister Gauge -->
+                <div class="flex flex-col items-center text-center">
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Fuel</span>
+                    <div class="w-6 h-10 bg-slate-900 rounded-lg border border-slate-700 relative p-1 flex flex-col justify-end my-0.5 overflow-hidden">
+                        <div id="fuel-gauge-fill" class="w-full bg-gradient-to-t from-emerald-500 to-amber-400 rounded transition-all duration-150" style="height: 100%;"></div>
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <i id="fuel-icon" class="fa-solid fa-gas-pump text-slate-200 text-[10px]"></i>
+                        </div>
+                    </div>
+                    <span id="stat-fuel" class="font-racing font-bold text-[11px] text-amber-300">100%</span>
+                </div>
+
+                <!-- Nitro Boost Gauge -->
+                <div class="flex flex-col items-center text-center">
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Nitro</span>
+                    <div class="w-6 h-10 bg-slate-900 rounded-lg border border-cyan-500/40 relative p-1 flex flex-col justify-end my-0.5 overflow-hidden">
+                        <div id="nitro-gauge-fill" class="w-full bg-gradient-to-t from-blue-500 via-cyan-400 to-teal-300 rounded transition-all duration-150" style="height: 100%;"></div>
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <i class="fa-solid fa-bolt text-cyan-200 text-[10px]"></i>
+                        </div>
+                    </div>
+                    <span id="stat-nitro" class="font-racing font-bold text-[11px] text-cyan-300">100%</span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Bottom Controls & 3D Pedals -->
+        <div class="absolute bottom-0 left-0 right-0 p-3 sm:p-6 flex justify-between items-end pointer-events-none">
+            
+            <!-- Left: Brake Pedal & Steer -->
+            <div class="flex items-end gap-3 pointer-events-auto">
+                <button id="pedal-brake" class="pedal-btn w-20 h-28 sm:w-24 sm:h-34 rounded-2xl bg-gradient-to-b from-rose-500 via-rose-600 to-rose-800 border-2 border-rose-300/40 shadow-[0_12px_28px_rgba(244,63,94,0.4)] flex flex-col items-center justify-between p-3 text-white select-none">
+                    <div class="w-full flex justify-between items-center text-[10px] font-racing font-bold tracking-widest uppercase">
+                        <span>Brake</span>
+                        <i class="fa-solid fa-arrow-rotate-left opacity-75"></i>
+                    </div>
+                    <div class="w-full flex flex-col gap-1.5 px-1">
+                        <div class="h-1.5 bg-rose-950/60 rounded-full"></div>
+                        <div class="h-1.5 bg-rose-950/60 rounded-full"></div>
+                        <div class="h-1.5 bg-rose-950/60 rounded-full"></div>
+                    </div>
+                    <span class="text-[9px] uppercase tracking-wider text-rose-200">Rev / Flip</span>
+                </button>
+
+                <div class="flex gap-1.5 glass-panel p-1.5 rounded-2xl">
+                    <button id="btn-left" class="w-11 h-11 sm:w-13 sm:h-13 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-amber-500 active:text-slate-950 text-white flex flex-col items-center justify-center text-xs shadow transition">
+                        <i class="fa-solid fa-chevron-left text-base"></i>
+                        <span class="text-[8px] font-racing font-bold uppercase">Left</span>
+                    </button>
+                    <button id="btn-right" class="w-11 h-11 sm:w-13 sm:h-13 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-amber-500 active:text-slate-950 text-white flex flex-col items-center justify-center text-xs shadow transition">
+                        <i class="fa-solid fa-chevron-right text-base"></i>
+                        <span class="text-[8px] font-racing font-bold uppercase">Right</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Hop, Nitro & Gas Pedal -->
+            <div class="flex items-end gap-3 pointer-events-auto">
+                <div class="flex flex-col gap-2">
+                    <button id="btn-nitro" class="w-12 h-12 sm:w-15 sm:h-15 rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-600 to-indigo-700 border border-cyan-300/50 shadow-lg shadow-cyan-500/40 active:scale-90 text-white flex flex-col items-center justify-center gap-0.5 transition nitro-ready">
+                        <i class="fa-solid fa-fire-flame-curved text-lg text-yellow-300"></i>
+                        <span class="font-racing text-[8px] font-bold uppercase tracking-wider">Nitro</span>
+                    </button>
+
+                    <button id="btn-hop" class="w-12 h-12 sm:w-15 sm:h-15 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 border border-purple-300/40 shadow-lg shadow-purple-500/30 active:scale-90 text-white flex flex-col items-center justify-center gap-0.5 transition">
+                        <i class="fa-solid fa-angles-up text-base"></i>
+                        <span class="font-racing text-[8px] font-bold uppercase tracking-wider">Hop</span>
+                    </button>
+                </div>
+
+                <button id="pedal-gas" class="pedal-btn w-20 h-32 sm:w-24 sm:h-38 rounded-2xl bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-700 border-2 border-emerald-200/50 shadow-[0_12px_28px_rgba(16,185,129,0.4)] flex flex-col items-center justify-between p-3 text-slate-950 select-none">
+                    <div class="w-full flex justify-between items-center text-[10px] font-racing font-bold tracking-widest uppercase">
+                        <span>Gas</span>
+                        <i class="fa-solid fa-arrow-rotate-right opacity-75"></i>
+                    </div>
+                    <div class="w-full flex flex-col gap-1.5 px-1">
+                        <div class="h-1.5 bg-emerald-950/40 rounded-full"></div>
+                        <div class="h-1.5 bg-emerald-950/40 rounded-full"></div>
+                        <div class="h-1.5 bg-emerald-950/40 rounded-full"></div>
+                        <div class="h-1.5 bg-emerald-950/40 rounded-full"></div>
+                    </div>
+                    <span class="text-[9px] uppercase tracking-wider font-bold">Drive / Tilt</span>
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- 4. PAUSE OVERLAY MODAL -->
+    <!-- ==================================================== -->
+    <div id="modal-pause" class="hidden fixed inset-0 z-40 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-6 flex flex-col items-center text-center gap-4 border border-amber-500/40 shadow-2xl">
+            <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-2xl">
+                <i class="fa-solid fa-pause"></i>
+            </div>
+            <h2 class="font-racing font-bold text-2xl text-white uppercase tracking-wider">Game Paused</h2>
+
+            <div class="w-full flex flex-col gap-2.5 pt-2">
+                <button id="btn-pause-resume" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 font-racing font-bold text-sm rounded-xl shadow-lg transition">
+                    Resume Driving
+                </button>
+                <button id="btn-pause-restart" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-racing font-bold text-sm rounded-xl border border-slate-700 transition">
+                    Restart Run
+                </button>
+                <button id="btn-pause-menu" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-rose-300 font-racing font-bold text-sm rounded-xl border border-rose-500/30 transition">
+                    Quit to Main Menu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- 5. GAME OVER / RUN SUMMARY MODAL -->
+    <!-- ==================================================== -->
+    <div id="modal-gameover" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8 flex flex-col items-center text-center gap-5 border border-rose-500/40 shadow-2xl">
+            <div class="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 text-3xl">
+                <i id="gameover-icon" class="fa-solid fa-gas-pump"></i>
+            </div>
+
+            <div>
+                <h2 id="gameover-title" class="font-racing font-extrabold text-2xl sm:text-3xl text-white uppercase tracking-wider">Out Of Fuel!</h2>
+                <p id="gameover-sub" class="text-xs text-slate-400 mt-1">Refuel at canisters to keep climbing infinite peaks!</p>
+            </div>
+
+            <div class="w-full grid grid-cols-2 gap-3 bg-slate-900/90 p-4 rounded-2xl border border-slate-800 text-left">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Total Distance</span>
+                    <div class="font-racing text-xl font-bold text-amber-400" id="go-stat-distance">0 m</div>
+                </div>
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Coins Collected</span>
+                    <div class="font-racing text-xl font-bold text-yellow-300" id="go-stat-coins">0</div>
+                </div>
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Air Flips</span>
+                    <div class="font-racing text-xl font-bold text-cyan-400" id="go-stat-flips">0</div>
+                </div>
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Max Air Time</span>
+                    <div class="font-racing text-xl font-bold text-purple-400" id="go-stat-air">0.0 s</div>
+                </div>
+            </div>
+
+            <div class="w-full flex gap-3 pt-2">
+                <button id="btn-go-menu" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-racing font-bold text-sm rounded-xl border border-slate-700 transition">
+                    Main Menu
+                </button>
+                <button id="btn-go-retry" class="flex-1 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 text-slate-950 font-racing font-bold text-sm rounded-xl shadow-lg transition">
+                    Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Celebration / Stunt Overlay Popups -->
+    <div id="stunts-container" class="fixed inset-0 pointer-events-none z-40 flex items-center justify-center overflow-hidden"></div>
+
+    <!-- ==================================================== -->
+    <!-- 6. CORE JAVASCRIPT: INFINITE CHUNKS & WEATHER ENGINE -->
+    <!-- ==================================================== -->
+    <script>
+        // ==========================================
+        // A. PERSISTENCE & USER STATE
+        // ==========================================
+        const SAVE_KEY = 'HILL_CLIMB_3D_INFINITE_V3';
+        let userState = {
+            coins: 100,
+            bestDistance: 0,
+            totalFlips: 0,
+            lifetimeDistance: 0,
+            selectedVehicle: 0,
+            paintColor: 0xe11d48,
+            audioEnabled: true,
+            isRotatedLandscape: false,
+            upgrades: { engine: 1, suspension: 1, tires: 1, nitro: 1 }
+        };
+
+        function loadSavedState() {
+            try {
+                const data = localStorage.getItem(SAVE_KEY);
+                if (data) userState = Object.assign(userState, JSON.parse(data));
+            } catch (e) { console.warn(e); }
+        }
+        function persistState() {
+            try { localStorage.setItem(SAVE_KEY, JSON.stringify(userState)); } catch (e) { console.warn(e); }
+        }
+        loadSavedState();
+
+        // ==========================================
+        // B. SCREEN ROTATION & MOBILE ADAPTATION
+        // ==========================================
+        let isSimulatedLandscape = userState.isRotatedLandscape || false;
+
+        async function toggleScreenRotation() {
+            audio.init();
+            // 1. Try native Screen Orientation API lock
+            let locked = false;
+            try {
+                if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+                    await document.documentElement.requestFullscreen();
+                }
+                if (screen.orientation && screen.orientation.lock) {
+                    if (screen.orientation.type.includes('portrait')) {
+                        await screen.orientation.lock('landscape');
+                        locked = true;
+                    } else {
+                        await screen.orientation.lock('portrait');
+                        locked = true;
+                    }
+                }
+            } catch (e) {
+                // Fallback to simulated CSS landscape mode if API is not supported or rejected
+            }
+
+            if (!locked) {
+                isSimulatedLandscape = !isSimulatedLandscape;
+                userState.isRotatedLandscape = isSimulatedLandscape;
+                persistState();
+                if (isSimulatedLandscape) {
+                    document.body.classList.add('force-landscape');
+                } else {
+                    document.body.classList.remove('force-landscape');
+                }
+                onWindowResize();
+            }
+        }
+
+        document.getElementById('btn-rotate-home').addEventListener('click', toggleScreenRotation);
+        document.getElementById('btn-rotate-hud').addEventListener('click', toggleScreenRotation);
+
+        // ==========================================
+        // C. PROCEDURAL WEB AUDIO SYNTHESIZER
+        // ==========================================
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.engineOsc = null;
+                this.engineFilter = null;
+                this.engineGain = null;
+            }
+
+            init() {
+                if (this.ctx) return;
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                    this.startEngineSound();
+                } catch (e) { console.warn(e); }
+            }
+
+            startEngineSound() {
+                if (!this.ctx || !userState.audioEnabled) return;
+                this.engineOsc = this.ctx.createOscillator();
+                this.engineOsc.type = 'sawtooth';
+                this.engineOsc.frequency.setValueAtTime(45, this.ctx.currentTime);
+
+                this.engineFilter = this.ctx.createBiquadFilter();
+                this.engineFilter.type = 'lowpass';
+                this.engineFilter.frequency.setValueAtTime(180, this.ctx.currentTime);
+
+                this.engineGain = this.ctx.createGain();
+                this.engineGain.gain.setValueAtTime(0.035, this.ctx.currentTime);
+
+                this.engineOsc.connect(this.engineFilter);
+                this.engineFilter.connect(this.engineGain);
+                this.engineGain.connect(this.ctx.destination);
+                this.engineOsc.start();
+            }
+
+            updateEngine(speedRatio, isGas, isMenu = false) {
+                if (!this.ctx || !userState.audioEnabled || !this.engineOsc) return;
+                let targetFreq = isMenu ? 42 : (40 + Math.abs(speedRatio) * 110 + (isGas ? 32 : 0));
+                let targetFilter = isMenu ? 160 : (160 + Math.abs(speedRatio) * 450 + (isGas ? 130 : 0));
+                let targetVol = isMenu ? 0.02 : (0.03 + (isGas ? 0.05 : 0.015));
+
+                const t = this.ctx.currentTime;
+                this.engineOsc.frequency.setTargetAtTime(targetFreq, t, 0.1);
+                this.engineFilter.frequency.setTargetAtTime(targetFilter, t, 0.1);
+                this.engineGain.gain.setTargetAtTime(targetVol, t, 0.1);
+            }
+
+            playCoin() {
+                if (!this.ctx || !userState.audioEnabled) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, t);
+                osc.frequency.setValueAtTime(1318.51, t + 0.08);
+                gain.gain.setValueAtTime(0.18, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.31);
+            }
+
+            playFuel() {
+                if (!this.ctx || !userState.audioEnabled) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(350, t);
+                osc.frequency.exponentialRampToValueAtTime(880, t + 0.28);
+                gain.gain.setValueAtTime(0.22, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.39);
+            }
+
+            playHop() {
+                if (!this.ctx || !userState.audioEnabled) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(140, t);
+                osc.frequency.exponentialRampToValueAtTime(320, t + 0.18);
+                gain.gain.setValueAtTime(0.25, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.23);
+            }
+
+            playNitro() {
+                if (!this.ctx || !userState.audioEnabled) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(110, t);
+                osc.frequency.linearRampToValueAtTime(360, t + 0.3);
+                gain.gain.setValueAtTime(0.14, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.52);
+            }
+
+            playFanfare() {
+                if (!this.ctx || !userState.audioEnabled) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const t = this.ctx.currentTime + idx * 0.07;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, t);
+                    gain.gain.setValueAtTime(0.2, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.26);
+                });
+            }
+
+            toggleAudio() {
+                userState.audioEnabled = !userState.audioEnabled;
+                persistState();
+                if (this.engineGain) {
+                    this.engineGain.gain.setValueAtTime(userState.audioEnabled ? 0.035 : 0, this.ctx.currentTime);
+                }
+                return userState.audioEnabled;
+            }
+        }
+        const audio = new SoundEngine();
+        window.addEventListener('pointerdown', () => audio.init(), { once: true });
+        window.addEventListener('keydown', () => audio.init(), { once: true });
+
+        // ==========================================
+        // D. APPLICATION STATE MACHINE
+        // ==========================================
+        const APP_STATES = { HOME: 'HOME', GAME: 'GAME', PAUSED: 'PAUSED', GAMEOVER: 'GAMEOVER' };
+        let currentAppState = APP_STATES.HOME;
+
+        const screenHome = document.getElementById('screen-home');
+        const screenGameHud = document.getElementById('screen-game-hud');
+        const modalGarage = document.getElementById('modal-garage');
+        const modalPause = document.getElementById('modal-pause');
+        const modalGameOver = document.getElementById('modal-gameover');
+
+        function setAppState(newState) {
+            currentAppState = newState;
+            screenHome.classList.toggle('hidden', currentAppState !== APP_STATES.HOME);
+            screenGameHud.classList.toggle('hidden', currentAppState !== APP_STATES.GAME);
+            modalPause.classList.toggle('hidden', currentAppState !== APP_STATES.PAUSED);
+            modalGameOver.classList.toggle('hidden', currentAppState !== APP_STATES.GAMEOVER);
+            if (currentAppState === APP_STATES.HOME) orbitAngle = 0;
+        }
+
+        // ==========================================
+        // E. THREE.JS SCENE, CAMERAS & RENDERER
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+
+        let cameraMode = 0;
+        const cameraModes = ['Side Cam', 'Chase Cam', 'Hood Cam'];
+
+        const camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.1, 900);
+        camera.position.set(0, 8, 22);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // ==========================================
+        // F. DYNAMIC WEATHER SYSTEM (SUNNY, RAIN, SNOW, SANDSTORM)
+        // ==========================================
+        const weathers = [
+            {
+                name: 'Sunny Dunes',
+                icon: 'fa-cloud-sun text-yellow-400',
+                skyColor: 0x38bdf8,
+                fogColor: 0xbae6fd,
+                sunColor: 0xfffbeb,
+                sunIntensity: 1.35,
+                ambientColor: 0xffffff,
+                ambientIntensity: 0.65,
+                particles: 'none'
+            },
+            {
+                name: 'Mountain Rain',
+                icon: 'fa-cloud-showers-heavy text-blue-400',
+                skyColor: 0x334155,
+                fogColor: 0x475569,
+                sunColor: 0x94a3b8,
+                sunIntensity: 0.6,
+                ambientColor: 0x64748b,
+                ambientIntensity: 0.45,
+                particles: 'rain'
+            },
+            {
+                name: 'Snow Blizzard',
+                icon: 'fa-snowflake text-sky-200',
+                skyColor: 0x0f172a,
+                fogColor: 0x1e293b,
+                sunColor: 0x7dd3fc,
+                sunIntensity: 0.7,
+                ambientColor: 0x38bdf8,
+                ambientIntensity: 0.4,
+                particles: 'snow'
+            },
+            {
+                name: 'Sunset Sandstorm',
+                icon: 'fa-wind text-orange-400',
+                skyColor: 0xc2410c,
+                fogColor: 0xea580c,
+                sunColor: 0xfed7aa,
+                sunIntensity: 1.1,
+                ambientColor: 0xfb923c,
+                ambientIntensity: 0.5,
+                particles: 'dust'
+            }
+        ];
+
+        let currentWeatherIndex = 0;
+        let currentWeather = weathers[0];
+
+        scene.background = new THREE.Color(currentWeather.skyColor);
+        scene.fog = new THREE.FogExp2(currentWeather.fogColor, 0.0035);
+
+        const ambientLight = new THREE.AmbientLight(currentWeather.ambientColor, currentWeather.ambientIntensity);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(currentWeather.sunColor, currentWeather.sunIntensity);
+        dirLight.position.set(70, 110, 50);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 10;
+        dirLight.shadow.camera.far = 300;
+        const d = 55;
+        dirLight.shadow.camera.left = -d;
+        dirLight.shadow.camera.right = d;
+        dirLight.shadow.camera.top = d;
+        dirLight.shadow.camera.bottom = -d;
+        dirLight.shadow.bias = -0.0004;
+        scene.add(dirLight);
+        scene.add(dirLight.target);
+
+        // Weather Particle System (Rain / Snow / Dust)
+        const WEATHER_PARTICLE_COUNT = 900;
+        const weatherParticleGeo = new THREE.BufferGeometry();
+        const weatherParticlePos = new Float32Array(WEATHER_PARTICLE_COUNT * 3);
+        for (let i = 0; i < WEATHER_PARTICLE_COUNT * 3; i += 3) {
+            weatherParticlePos[i] = (Math.random() - 0.5) * 120;
+            weatherParticlePos[i + 1] = Math.random() * 45;
+            weatherParticlePos[i + 2] = (Math.random() - 0.5) * 60;
+        }
+        weatherParticleGeo.setAttribute('position', new THREE.BufferAttribute(weatherParticlePos, 3));
+        const weatherParticleMat = new THREE.PointsMaterial({
+            color: 0x93c5fd,
+            size: 0.35,
+            transparent: true,
+            opacity: 0
+        });
+        const weatherParticleMesh = new THREE.Points(weatherParticleGeo, weatherParticleMat);
+        scene.add(weatherParticleMesh);
+
+        function applyWeather(idx) {
+            currentWeatherIndex = idx % weathers.length;
+            currentWeather = weathers[currentWeatherIndex];
+
+            scene.background.setHex(currentWeather.skyColor);
+            scene.fog.color.setHex(currentWeather.fogColor);
+            ambientLight.color.setHex(currentWeather.ambientColor);
+            ambientLight.intensity = currentWeather.ambientIntensity;
+            dirLight.color.setHex(currentWeather.sunColor);
+            dirLight.intensity = currentWeather.sunIntensity;
+
+            document.getElementById('home-weather-name').textContent = currentWeather.name;
+            document.getElementById('hud-weather-label').textContent = currentWeather.name.split(' ')[0];
+            document.getElementById('home-weather-icon').className = `fa-solid ${currentWeather.icon}`;
+            document.getElementById('hud-weather-icon').className = `fa-solid ${currentWeather.icon}`;
+
+            if (currentWeather.particles === 'rain') {
+                weatherParticleMat.color.setHex(0x93c5fd);
+                weatherParticleMat.size = 0.45;
+                weatherParticleMat.opacity = 0.8;
+            } else if (currentWeather.particles === 'snow') {
+                weatherParticleMat.color.setHex(0xffffff);
+                weatherParticleMat.size = 0.55;
+                weatherParticleMat.opacity = 0.9;
+            } else if (currentWeather.particles === 'dust') {
+                weatherParticleMat.color.setHex(0xfb923c);
+                weatherParticleMat.size = 0.5;
+                weatherParticleMat.opacity = 0.65;
+            } else {
+                weatherParticleMat.opacity = 0;
+            }
+        }
+
+        document.getElementById('btn-home-weather').addEventListener('click', () => applyWeather(currentWeatherIndex + 1));
+        document.getElementById('btn-weather').addEventListener('click', () => applyWeather(currentWeatherIndex + 1));
+
+        // ==========================================
+        // G. HIGH HILLS & ADVENTURE PROCEDURAL MATH
+        // ==========================================
+        function getTerrainHeight(x, z) {
+            const startFlatten = Math.min(1.0, Math.abs(x) / 18.0);
+            let h = 0;
+
+            // Giant High Hills (Heights up to 32 meters!)
+            h += Math.sin(x * 0.032) * 11.5;
+            h += Math.sin(x * 0.075 + 1.2) * 5.8;
+            h += Math.cos(x * 0.016 - 0.7) * 14.5;
+            h += Math.sin(x * 0.16) * 1.2;
+
+            h *= startFlatten;
+
+            // Mega Adventure Stunt Ramps every ~350m
+            const rampCycle = (Math.abs(x) + 120) % 360;
+            if (rampCycle < 24 && Math.abs(z) < 4.5) {
+                // Progressive wooden stunt kicker ramp
+                h += (rampCycle / 24) * 6.5;
+            }
+
+            // Lateral canyon walls
+            const distFromCenter = Math.abs(z);
+            if (distFromCenter > 6.5) {
+                const edgeFactor = distFromCenter - 6.5;
+                h += Math.pow(edgeFactor, 1.35) * 0.48 + Math.sin(x * 0.12 + z * 0.2) * 0.75;
+            }
+            return h;
+        }
+
+        function getTerrainNormal(x, z) {
+            const eps = 0.25;
+            const hL = getTerrainHeight(x - eps, z);
+            const hR = getTerrainHeight(x + eps, z);
+            const hD = getTerrainHeight(x, z - eps);
+            const hU = getTerrainHeight(x, z + eps);
+            return new THREE.Vector3(hL - hR, 2 * eps, hD - hU).normalize();
+        }
+
+        // ==========================================
+        // H. INFINITE RECYCLING TERRAIN CHUNKS
+        // ==========================================
+        const CHUNK_LENGTH = 800;
+        const CHUNK_WIDTH = 95;
+        const CHUNK_SEG_X = 320;
+        const CHUNK_SEG_Z = 44;
+        const NUM_CHUNKS = 3;
+
+        const chunks = [];
+        const terrainMat = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            roughness: 0.88,
+            metalness: 0.05,
+            flatShading: true
+        });
+
+        const colorDirtTrack = new THREE.Color(0xa16207);
+        const colorShoulder = new THREE.Color(0xb45309);
+        const colorHillGrass = new THREE.Color(0x15803d);
+
+        function createChunk(chunkIndex) {
+            const geo = new THREE.PlaneGeometry(CHUNK_LENGTH, CHUNK_WIDTH, CHUNK_SEG_X, CHUNK_SEG_Z);
+            geo.rotateX(-Math.PI / 2);
+
+            const mesh = new THREE.Mesh(geo, terrainMat);
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+
+            const chunkData = {
+                mesh,
+                geo,
+                startIndex: chunkIndex,
+                startX: chunkIndex * CHUNK_LENGTH - 200,
+                decorations: new THREE.Group()
+            };
+            scene.add(chunkData.decorations);
+            updateChunkGeometry(chunkData, chunkData.startX);
+            chunks.push(chunkData);
+        }
+
+        function updateChunkGeometry(chunkData, startX) {
+            chunkData.startX = startX;
+            chunkData.mesh.position.set(startX + CHUNK_LENGTH / 2, 0, 0);
+
+            const posAttr = chunkData.geo.attributes.position;
+            const colors = [];
+
+            for (let i = 0; i < posAttr.count; i++) {
+                const localX = posAttr.getX(i);
+                const localZ = posAttr.getZ(i);
+                const worldX = localX + startX + CHUNK_LENGTH / 2;
+                const worldZ = localZ;
+                const vy = getTerrainHeight(worldX, worldZ);
+                posAttr.setY(i, vy);
+
+                const absZ = Math.abs(worldZ);
+                let c = (absZ < 4.5) ? colorDirtTrack.clone() : (absZ < 6.8 ? colorShoulder : colorHillGrass.clone());
+                c.offsetHSL(0, 0, Math.sin(worldX * 0.4 + worldZ * 0.4) * 0.04);
+                colors.push(c.r, c.g, c.b);
+            }
+
+            chunkData.geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            chunkData.geo.computeVertexNormals();
+            chunkData.geo.attributes.position.needsUpdate = true;
+            chunkData.geo.attributes.color.needsUpdate = true;
+
+            // Spawn Scenery & Obstacles on this chunk
+            spawnChunkScenery(chunkData);
+        }
+
+        // Low-Poly Pine Trees, Rocks & Stunt Bridges
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9, flatShading: true });
+        const leafMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.8, flatShading: true });
+        const rockMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.85, flatShading: true });
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x854d0e, roughness: 0.7 });
+
+        function spawnChunkScenery(chunkData) {
+            while (chunkData.decorations.children.length > 0) {
+                chunkData.decorations.remove(chunkData.decorations.children[0]);
+            }
+
+            const startX = chunkData.startX;
+            const endX = startX + CHUNK_LENGTH;
+
+            for (let x = startX + 10; x < endX - 10; x += 18) {
+                // Trees on hillsides
+                [-1, 1].forEach(side => {
+                    if (Math.random() > 0.3) {
+                        const z = side * (8.5 + Math.random() * 18);
+                        const y = getTerrainHeight(x, z);
+                        const tree = new THREE.Group();
+                        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.35, 1.8, 6), trunkMat);
+                        trunk.position.y = 0.9;
+                        tree.add(trunk);
+                        const cone = new THREE.Mesh(new THREE.ConeGeometry(1.6, 3.2, 7), leafMat);
+                        cone.position.y = 2.8;
+                        tree.add(cone);
+                        tree.position.set(x, y - 0.1, z);
+                        chunkData.decorations.add(tree);
+                    }
+                });
+
+                // Adventure Stunt Jump Launch Ramp Visuals
+                const rampCycle = (Math.abs(x) + 120) % 360;
+                if (rampCycle < 24) {
+                    const rampMesh = new THREE.Mesh(new THREE.BoxGeometry(16, 0.4, 8), woodMat);
+                    rampMesh.position.set(x, getTerrainHeight(x, 0) + 1.2, 0);
+                    rampMesh.rotation.z = 0.22;
+                    chunkData.decorations.add(rampMesh);
+                }
+            }
+        }
+
+        for (let i = 0; i < NUM_CHUNKS; i++) {
+            createChunk(i);
+        }
+
+        // ==========================================
+        // I. FULL FUEL JERRYCANS & COIN COLLECTIBLES
+        // ==========================================
+        const collectibles = [];
+        const coinGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.18, 16);
+        coinGeo.rotateX(Math.PI / 2);
+        const coinMat = new THREE.MeshStandardMaterial({
+            color: 0xfacc15,
+            metalness: 0.8,
+            roughness: 0.2,
+            emissive: 0xd97706,
+            emissiveIntensity: 0.35
+        });
+
+        const fuelGeo = new THREE.BoxGeometry(0.9, 1.2, 0.55);
+        const fuelMat = new THREE.MeshStandardMaterial({
+            color: 0xf43f5e,
+            emissive: 0xbe123c,
+            emissiveIntensity: 0.45,
+            roughness: 0.3
+        });
+
+        function populateCollectiblesAhead(minX, maxX) {
+            for (let x = minX; x < maxX; x += 22) {
+                const isFuel = (x % 132 === 0);
+                const y = getTerrainHeight(x, 0);
+
+                if (isFuel) {
+                    const fMesh = new THREE.Mesh(fuelGeo, fuelMat);
+                    fMesh.position.set(x, y + 1.2, 0);
+                    fMesh.castShadow = true;
+                    scene.add(fMesh);
+                    collectibles.push({ mesh: fMesh, type: 'fuel', collected: false, baseX: x, baseY: y + 1.2 });
+                } else {
+                    for (let c = 0; c < 3; c++) {
+                        const cx = x + c * 3.4;
+                        const cy = getTerrainHeight(cx, 0) + 1.1;
+                        const cMesh = new THREE.Mesh(coinGeo, coinMat);
+                        cMesh.position.set(cx, cy, 0);
+                        cMesh.castShadow = true;
+                        scene.add(cMesh);
+                        collectibles.push({ mesh: cMesh, type: 'coin', collected: false, baseX: cx, baseY: cy });
+                    }
+                }
+            }
+        }
+        populateCollectiblesAhead(24, 2200);
+
+        // ==========================================
+        // J. 3D VEHICLE RIGGING
+        // ==========================================
+        const carRoot = new THREE.Group();
+        scene.add(carRoot);
+
+        const chassisGroup = new THREE.Group();
+        carRoot.add(chassisGroup);
+
+        const bodyPaintMat = new THREE.MeshStandardMaterial({
+            color: userState.paintColor,
+            roughness: 0.3,
+            metalness: 0.25,
+            flatShading: true
+        });
+        const trimMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6, metalness: 0.3 });
+        const cageMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4, metalness: 0.5 });
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.7 });
+        const chromeMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.15, metalness: 0.9 });
+        const tireMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.85, flatShading: true });
+        const springMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.6, roughness: 0.3 });
+
+        let carModelGroup = new THREE.Group();
+        chassisGroup.add(carModelGroup);
+
+        const wheels = [];
+        let wheelRadius = 0.68;
+
+        function buildVehicleModel(typeIndex) {
+            while (carModelGroup.children.length > 0) {
+                carModelGroup.remove(carModelGroup.children[0]);
+            }
+            wheels.forEach(w => {
+                carRoot.remove(w.pivot);
+                carRoot.remove(w.spring);
+            });
+            wheels.length = 0;
+
+            if (typeIndex === 0) {
+                // Crawler 4x4
+                wheelRadius = 0.68;
+                const mainBody = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.95, 2.15), bodyPaintMat);
+                mainBody.position.set(0, 1.35, 0);
+                mainBody.castShadow = true;
+                carModelGroup.add(mainBody);
+
+                const hood = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 1.95), bodyPaintMat);
+                hood.position.set(1.25, 1.85, 0);
+                hood.rotation.z = -0.08;
+                carModelGroup.add(hood);
+
+                const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.95, 1.85), bodyPaintMat);
+                cabin.position.set(-0.25, 2.2, 0);
+                carModelGroup.add(cabin);
+
+                const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.72, 1.88), glassMat);
+                windshield.position.set(-0.18, 2.25, 0);
+                carModelGroup.add(windshield);
+
+                const roofRack = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.12, 1.95), cageMat);
+                roofRack.position.set(-0.3, 2.75, 0);
+                carModelGroup.add(roofRack);
+            } else if (typeIndex === 1) {
+                // Dune Buggy
+                wheelRadius = 0.62;
+                const buggyHull = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.75, 1.8), bodyPaintMat);
+                buggyHull.position.set(0, 1.2, 0);
+                carModelGroup.add(buggyHull);
+
+                const cageTop = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.1, 1.5), cageMat);
+                cageTop.position.set(-0.2, 1.9, 0);
+                carModelGroup.add(cageTop);
+
+                const spoiler = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 1.9), trimMat);
+                spoiler.position.set(-2.0, 2.1, 0);
+                spoiler.rotation.z = 0.15;
+                carModelGroup.add(spoiler);
+            } else {
+                // Monster Crusher
+                wheelRadius = 0.96;
+                const monsterBody = new THREE.Mesh(new THREE.BoxGeometry(4.8, 1.3, 2.3), bodyPaintMat);
+                monsterBody.position.set(0, 1.8, 0);
+                carModelGroup.add(monsterBody);
+
+                const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.1, 2.0), glassMat);
+                cabin.position.set(-0.2, 2.7, 0);
+                carModelGroup.add(cabin);
+            }
+
+            // Headlights
+            [-0.68, 0.68].forEach(zPos => {
+                const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfffbeb, emissiveIntensity: 1.0 }));
+                lamp.rotation.z = Math.PI / 2;
+                lamp.position.set(2.21, 1.45, zPos);
+                carModelGroup.add(lamp);
+            });
+
+            // 4 Wheels
+            const wheelConfigs = [
+                { x: 1.42, z: 1.18, isFront: true },
+                { x: 1.42, z: -1.18, isFront: true },
+                { x: -1.42, z: 1.18, isFront: false },
+                { x: -1.42, z: -1.18, isFront: false }
+            ];
+
+            wheelConfigs.forEach(wp => {
+                const pivot = new THREE.Group();
+                pivot.position.set(wp.x, wheelRadius, wp.z);
+                carRoot.add(pivot);
+
+                const spinGroup = new THREE.Group();
+                pivot.add(spinGroup);
+
+                const tire = new THREE.Mesh(new THREE.CylinderGeometry(wheelRadius, wheelRadius, 0.52, 16), tireMat);
+                tire.rotation.x = Math.PI / 2;
+                tire.castShadow = true;
+                spinGroup.add(tire);
+
+                const rim = new THREE.Mesh(new THREE.CylinderGeometry(wheelRadius * 0.55, wheelRadius * 0.55, 0.55, 10), chromeMat);
+                rim.rotation.x = Math.PI / 2;
+                spinGroup.add(rim);
+
+                const spring = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8, 8), springMat);
+                spring.position.set(wp.x, 1.0, wp.z * 0.82);
+                carRoot.add(spring);
+
+                wheels.push({ pivot, spinGroup, spring, baseX: wp.x, baseZ: wp.z, isFront: wp.isFront });
+            });
+        }
+        buildVehicleModel(userState.selectedVehicle);
+
+        // Headlight dynamic spotlight
+        const headSpotLight = new THREE.SpotLight(0xfffbeb, 2.2, 50, Math.PI / 4, 0.45, 1.2);
+        headSpotLight.position.set(2.2, 1.8, 0);
+        headSpotLight.target.position.set(16, 0.2, 0);
+        chassisGroup.add(headSpotLight);
+        chassisGroup.add(headSpotLight.target);
+        let headlightsActive = false;
+        function setHeadlights(state) {
+            headlightsActive = state;
+            headSpotLight.intensity = state ? 2.6 : 0;
+        }
+
+        // ==========================================
+        // K. DRIVING PHYSICS & INPUTS
+        // ==========================================
+        const carState = {
+            x: 0,
+            z: 0,
+            y: getTerrainHeight(0, 0),
+            speed: 0,
+            vy: 0,
+            yaw: 0,
+            steerAngle: 0,
+            pitch: 0,
+            pitchVel: 0,
+            roll: 0,
+            rollVel: 0,
+            suspensionOffset: 0,
+            suspensionVel: 0,
+            airborne: false,
+            airTime: 0,
+            cumulativeFlipAngle: 0,
+            runFlips: 0,
+            maxAirTime: 0,
+            fuel: 100,
+            nitro: 100,
+            isNitroActive: false,
+            runCoins: 0,
+            lastWeatherMilestone: 0
+        };
+
+        const input = { gas: false, brake: false, left: false, right: false, nitro: false };
+
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            if (currentAppState === APP_STATES.GAME) {
+                if (k === 'w' || k === 'arrowup') { input.gas = true; document.getElementById('pedal-gas').classList.add('active-pedal'); }
+                if (k === 's' || k === 'arrowdown') { input.brake = true; document.getElementById('pedal-brake').classList.add('active-pedal'); }
+                if (k === 'a' || k === 'arrowleft') input.left = true;
+                if (k === 'd' || k === 'arrowright') input.right = true;
+                if (e.shiftKey) input.nitro = true;
+                if (k === ' ') triggerHop();
+                if (k === 'c') cycleCamera();
+                if (k === 'escape' || k === 'p') togglePause();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const k = e.key.toLowerCase();
+            if (k === 'w' || k === 'arrowup') { input.gas = false; document.getElementById('pedal-gas').classList.remove('active-pedal'); }
+            if (k === 's' || k === 'arrowdown') { input.brake = false; document.getElementById('pedal-brake').classList.remove('active-pedal'); }
+            if (k === 'a' || k === 'arrowleft') input.left = false;
+            if (k === 'd' || k === 'arrowright') input.right = false;
+            if (!e.shiftKey) input.nitro = false;
+        });
+
+        function bindButton(elemId, key) {
+            const el = document.getElementById(elemId);
+            const press = (e) => {
+                e.preventDefault();
+                audio.init();
+                input[key] = true;
+                el.classList.add('active-pedal');
+            };
+            const release = (e) => {
+                e.preventDefault();
+                input[key] = false;
+                el.classList.remove('active-pedal');
+            };
+            el.addEventListener('mousedown', press);
+            el.addEventListener('touchstart', press, { passive: false });
+            window.addEventListener('mouseup', () => { if (input[key]) { input[key] = false; el.classList.remove('active-pedal'); } });
+            el.addEventListener('touchend', release);
+            el.addEventListener('touchcancel', release);
+        }
+        bindButton('pedal-gas', 'gas');
+        bindButton('pedal-brake', 'brake');
+        bindButton('btn-left', 'left');
+        bindButton('btn-right', 'right');
+        bindButton('btn-nitro', 'nitro');
+
+        document.getElementById('btn-hop').addEventListener('click', triggerHop);
+        document.getElementById('btn-lights').addEventListener('click', () => setHeadlights(!headlightsActive));
+        document.getElementById('btn-pause').addEventListener('click', togglePause);
+
+        function triggerHop() {
+            if (!carState.airborne && currentAppState === APP_STATES.GAME) {
+                audio.playHop();
+                carState.vy = 10.2;
+                carState.suspensionVel = 6.8;
+                carState.airborne = true;
+            }
+        }
+
+        function cycleCamera() {
+            cameraMode = (cameraMode + 1) % cameraModes.length;
+            document.getElementById('camera-label').textContent = cameraModes[cameraMode];
+        }
+        document.getElementById('btn-camera').addEventListener('click', cycleCamera);
+
+        function togglePause() {
+            if (currentAppState === APP_STATES.GAME) setAppState(APP_STATES.PAUSED);
+            else if (currentAppState === APP_STATES.PAUSED) setAppState(APP_STATES.GAME);
+        }
+        document.getElementById('btn-pause-resume').addEventListener('click', () => setAppState(APP_STATES.GAME));
+        document.getElementById('btn-pause-restart').addEventListener('click', startNewRun);
+        document.getElementById('btn-pause-menu').addEventListener('click', () => setAppState(APP_STATES.HOME));
+
+        // ==========================================
+        // L. STUNT CELEBRATION NOTIFICATIONS
+        // ==========================================
+        const stuntsContainer = document.getElementById('stunts-container');
+        function showStuntPopup(title, bonus) {
+            audio.playFanfare();
+            carState.runCoins += bonus;
+            userState.coins += bonus;
+            persistState();
+            updateWalletDisplays();
+
+            const div = document.createElement('div');
+            div.className = 'absolute font-racing font-extrabold text-center stunt-popup-anim pointer-events-none';
+            div.innerHTML = `
+                <div class="text-3xl sm:text-5xl text-amber-400 drop-shadow-[0_4px_16px_rgba(245,158,11,0.85)] tracking-wider italic">
+                    ${title}
+                </div>
+                <div class="text-xs sm:text-sm font-bold bg-amber-500 text-slate-950 px-3.5 py-1 rounded-full inline-block mt-1 shadow-lg">
+                    +${bonus} COINS
+                </div>
+            `;
+            stuntsContainer.appendChild(div);
+            setTimeout(() => div.remove(), 1300);
+        }
+
+        // ==========================================
+        // M. RUN MANAGEMENT & GAME OVER
+        // ==========================================
+        function startNewRun() {
+            carState.x = 0;
+            carState.z = 0;
+            carState.y = getTerrainHeight(0, 0);
+            carState.speed = 0;
+            carState.vy = 0;
+            carState.yaw = 0;
+            carState.pitch = 0;
+            carState.pitchVel = 0;
+            carState.roll = 0;
+            carState.airborne = false;
+            carState.airTime = 0;
+            carState.fuel = 100;
+            carState.nitro = 100;
+            carState.cumulativeFlipAngle = 0;
+            carState.runFlips = 0;
+            carState.runCoins = 0;
+            carState.lastWeatherMilestone = 0;
+
+            // Reset Chunks to start
+            chunks.forEach((chunk, idx) => {
+                updateChunkGeometry(chunk, idx * CHUNK_LENGTH - 200);
+            });
+
+            collectibles.forEach(item => {
+                item.collected = false;
+                item.mesh.visible = true;
+            });
+
+            setAppState(APP_STATES.GAME);
+        }
+
+        function triggerGameOver(reason) {
+            if (currentAppState !== APP_STATES.GAME) return;
+            const dist = Math.max(0, Math.floor(carState.x));
+            userState.lifetimeDistance += dist;
+            userState.totalFlips += carState.runFlips;
+            if (dist > userState.bestDistance) userState.bestDistance = dist;
+            persistState();
+
+            document.getElementById('gameover-icon').className = 'fa-solid fa-gas-pump text-rose-400';
+            document.getElementById('gameover-title').textContent = (reason === 'crash') ? 'Driver Down!' : 'Out Of Fuel!';
+            document.getElementById('gameover-sub').textContent = 'Refuel at full jerrycans or upgrade parts in Garage!';
+
+            document.getElementById('go-stat-distance').textContent = `${dist} m`;
+            document.getElementById('go-stat-coins').textContent = carState.runCoins;
+            document.getElementById('go-stat-flips').textContent = carState.runFlips;
+            document.getElementById('go-stat-air').textContent = `${carState.maxAirTime.toFixed(1)} s`;
+
+            updateWalletDisplays();
+            setAppState(APP_STATES.GAMEOVER);
+        }
+
+        document.getElementById('btn-go-retry').addEventListener('click', startNewRun);
+        document.getElementById('btn-go-menu').addEventListener('click', () => setAppState(APP_STATES.HOME));
+
+        // ==========================================
+        // N. UI MODAL WIRING & UPGRADES
+        // ==========================================
+        function updateWalletDisplays() {
+            document.getElementById('home-coins').textContent = userState.coins;
+            document.getElementById('hud-coins').textContent = userState.coins;
+            document.getElementById('garage-coins').textContent = userState.coins;
+            document.getElementById('home-best-distance').textContent = `${userState.bestDistance} m`;
+        }
+        updateWalletDisplays();
+
+        document.getElementById('btn-main-play').addEventListener('click', () => {
+            audio.init();
+            startNewRun();
+        });
+
+        document.getElementById('btn-home-garage').addEventListener('click', () => modalGarage.classList.remove('hidden'));
+        document.getElementById('btn-close-garage').addEventListener('click', () => modalGarage.classList.add('hidden'));
+        document.getElementById('btn-garage-done').addEventListener('click', () => modalGarage.classList.add('hidden'));
+
+        document.getElementById('btn-home-sound').addEventListener('click', () => {
+            const on = audio.toggleAudio();
+            document.getElementById('home-sound-icon').className = on ? 'fa-solid fa-volume-high text-amber-400 text-base' : 'fa-solid fa-volume-xmark text-slate-500 text-base';
+        });
+
+        document.getElementById('btn-home-fullscreen').addEventListener('click', () => {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+            else document.exitFullscreen().catch(() => {});
+        });
+
+        document.querySelectorAll('.vehicle-select-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const vIdx = parseInt(btn.getAttribute('data-vehicle'));
+                userState.selectedVehicle = vIdx;
+                persistState();
+                buildVehicleModel(vIdx);
+
+                document.querySelectorAll('.vehicle-select-btn').forEach(b => b.classList.replace('border-amber-500', 'border-transparent'));
+                btn.classList.replace('border-transparent', 'border-amber-500');
+
+                const names = ['Crawler 4x4', 'Dune Buggy', 'Monster Crusher'];
+                document.getElementById('home-vehicle-name').textContent = names[vIdx];
+            });
+        });
+
+        document.querySelectorAll('.paint-chip').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const col = parseInt(btn.getAttribute('data-color'));
+                userState.paintColor = col;
+                persistState();
+                bodyPaintMat.color.setHex(col);
+                document.querySelectorAll('.paint-chip').forEach(b => b.classList.replace('border-white', 'border-transparent'));
+                btn.classList.replace('border-transparent', 'border-white');
+            });
+        });
+
+        function setupUpgrade(btnId, type, barId, lvlId) {
+            const btn = document.getElementById(btnId);
+            const refresh = () => {
+                document.getElementById(lvlId).textContent = `LVL ${userState.upgrades[type]}/5`;
+                document.getElementById(barId).style.width = `${userState.upgrades[type] * 20}%`;
+            };
+            refresh();
+
+            btn.addEventListener('click', () => {
+                if (userState.upgrades[type] < 5 && userState.coins >= 50) {
+                    userState.coins -= 50;
+                    userState.upgrades[type]++;
+                    persistState();
+                    refresh();
+                    updateWalletDisplays();
+                    audio.playCoin();
+                }
+            });
+        }
+        setupUpgrade('btn-upg-engine', 'engine', 'bar-engine', 'level-engine');
+        setupUpgrade('btn-upg-suspension', 'suspension', 'bar-suspension', 'level-suspension');
+        setupUpgrade('btn-upg-tires', 'tires', 'bar-tires', 'level-tires');
+        setupUpgrade('btn-upg-nitro', 'nitro', 'bar-nitro', 'level-nitro');
+
+        // ==========================================
+        // O. DYNAMIC SHIFTING ELEVATION RADAR
+        // ==========================================
+        const radarCanvas = document.getElementById('radar-canvas');
+        const radarCtx = radarCanvas.getContext('2d');
+        const hudDist = document.getElementById('hud-track-distance');
+
+        function updateRadar() {
+            radarCtx.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
+            radarCtx.beginPath();
+            radarCtx.strokeStyle = '#f59e0b';
+            radarCtx.lineWidth = 2.5;
+
+            const w = radarCanvas.width;
+            const h = radarCanvas.height;
+            const scanRange = 300; // Next 300m
+
+            for (let i = 0; i <= w; i += 4) {
+                const worldX = carState.x + (i / w) * scanRange;
+                const groundY = getTerrainHeight(worldX, 0);
+                const py = h - ((groundY + 12) / 36) * h;
+                if (i === 0) radarCtx.moveTo(i, py);
+                else radarCtx.lineTo(i, py);
+            }
+            radarCtx.stroke();
+
+            // Draw fuel stops in next 300m
+            collectibles.forEach(c => {
+                if (c.type === 'fuel' && !c.collected && c.baseX > carState.x && c.baseX < carState.x + scanRange) {
+                    const rx = ((c.baseX - carState.x) / scanRange) * w;
+                    radarCtx.fillStyle = '#f43f5e';
+                    radarCtx.fillRect(rx - 2, 2, 4, 8);
+                }
+            });
+
+            hudDist.textContent = `${Math.max(0, Math.floor(carState.x))} m`;
+        }
+
+        // ==========================================
+        // P. MAIN PHYSICS & ANIMATION ENGINE
+        // ==========================================
+        const clock = new THREE.Clock();
+        let orbitAngle = 0;
+
+        const uiSpeed = document.getElementById('stat-speed');
+        const speedMeterBar = document.getElementById('speed-meter-bar');
+        const uiPitch = document.getElementById('stat-pitch');
+        const inclineDisc = document.getElementById('incline-disc');
+        const uiFuel = document.getElementById('stat-fuel');
+        const fuelGaugeFill = document.getElementById('fuel-gauge-fill');
+        const fuelIcon = document.getElementById('fuel-icon');
+        const uiNitro = document.getElementById('stat-nitro');
+        const nitroGaugeFill = document.getElementById('nitro-gauge-fill');
+
+        const gearElements = {
+            r: document.getElementById('gear-r'),
+            n: document.getElementById('gear-n'),
+            1: document.getElementById('gear-1'),
+            2: document.getElementById('gear-2'),
+            3: document.getElementById('gear-3'),
+            4: document.getElementById('gear-4'),
+            boost: document.getElementById('gear-boost')
+        };
+
+        function updateGears(speedKmh, isNitro) {
+            Object.values(gearElements).forEach(el => el.className = 'text-slate-600');
+            if (isNitro) {
+                gearElements.boost.className = 'text-cyan-400 font-extrabold animate-pulse';
+            } else if (carState.speed < -1.0) {
+                gearElements.r.className = 'text-rose-400 font-extrabold';
+            } else if (Math.abs(speedKmh) < 2) {
+                gearElements.n.className = 'text-white font-extrabold';
+            } else if (speedKmh < 24) {
+                gearElements[1].className = 'text-emerald-400 font-extrabold';
+            } else if (speedKmh < 48) {
+                gearElements[2].className = 'text-emerald-400 font-extrabold';
+            } else if (speedKmh < 75) {
+                gearElements[3].className = 'text-amber-400 font-extrabold';
+            } else {
+                gearElements[4].className = 'text-red-400 font-extrabold';
+            }
+        }
+
+        function updatePhysics(dt) {
+            if (currentAppState === APP_STATES.HOME) {
+                orbitAngle += dt * 0.45;
+                const camRadius = 14;
+                camera.position.set(
+                    carState.x + Math.sin(orbitAngle) * camRadius,
+                    carState.y + 3.8 + Math.sin(orbitAngle * 0.5) * 0.8,
+                    carState.z + Math.cos(orbitAngle) * camRadius
+                );
+                camera.lookAt(new THREE.Vector3(carState.x, carState.y + 1.2, carState.z));
+                carRoot.position.set(0, getTerrainHeight(0, 0), 0);
+                chassisGroup.rotation.set(0, 0, 0);
+                audio.updateEngine(0, false, true);
+                return;
+            }
+
+            if (currentAppState !== APP_STATES.GAME) return;
+
+            // 1. Upgrades Physics
+            const maxForwardSpeed = 26 + (userState.upgrades.engine * 3.5);
+            const reverseMaxSpeed = -13;
+            const engineAccel = 24 + (userState.upgrades.engine * 4.0);
+            const tireGrip = 1.0 + (userState.upgrades.tires * 0.22);
+            const shockDamping = 8.0 + (userState.upgrades.suspension * 2.2);
+
+            // 2. Nitro Handling
+            carState.isNitroActive = input.nitro && carState.nitro > 2 && carState.fuel > 0;
+            if (carState.isNitroActive) {
+                carState.nitro = Math.max(0, carState.nitro - dt * (32 / (1 + userState.upgrades.nitro * 0.2)));
+                carState.speed += (engineAccel * 1.8) * dt;
+                audio.playNitro();
+            } else {
+                carState.nitro = Math.min(100, carState.nitro + dt * (3.5 + userState.upgrades.nitro * 1.2));
+            }
+
+            // 3. Steering & High Hills Air Flips
+            const targetSteer = (input.left ? 0.42 : 0) + (input.right ? -0.42 : 0);
+            carState.steerAngle += (targetSteer - carState.steerAngle) * Math.min(1, dt * 10);
+
+            const slopeNormal = getTerrainNormal(carState.x, carState.z);
+            const slopeGravity = -slopeNormal.x * 16.5;
+
+            if (carState.airborne) {
+                if (input.gas) carState.pitchVel += 4.5 * dt;
+                if (input.brake) carState.pitchVel -= 4.5 * dt;
+                carState.cumulativeFlipAngle += carState.pitchVel * dt;
+
+                if (Math.abs(carState.cumulativeFlipAngle) >= Math.PI * 1.9) {
+                    carState.runFlips++;
+                    const isBackflip = (carState.cumulativeFlipAngle > 0);
+                    showStuntPopup(isBackflip ? 'BACKFLIP!' : 'FRONTFLIP!', 250);
+                    carState.cumulativeFlipAngle = 0;
+                }
+            } else {
+                carState.cumulativeFlipAngle = 0;
+                if (input.gas && carState.fuel > 0) {
+                    carState.speed += (engineAccel + slopeGravity * 0.45 * tireGrip) * dt;
+                    carState.fuel = Math.max(0, carState.fuel - dt * 1.45);
+                    carState.pitchVel += 1.8 * dt;
+                } else if (input.brake) {
+                    if (carState.speed > 1.0) carState.speed -= 36.0 * dt;
+                    else carState.speed -= engineAccel * 0.65 * dt;
+                    carState.pitchVel -= 1.8 * dt;
+                } else {
+                    carState.speed += slopeGravity * 0.35 * dt;
+                    if (Math.abs(carState.speed) > 0.2) carState.speed -= Math.sign(carState.speed) * (5.2 / tireGrip) * dt;
+                    else carState.speed = 0;
+                }
+            }
+
+            const currentMaxSpeed = carState.isNitroActive ? (maxForwardSpeed * 1.4) : maxForwardSpeed;
+            carState.speed = Math.max(reverseMaxSpeed, Math.min(currentMaxSpeed, carState.speed));
+            audio.updateEngine(carState.speed / maxForwardSpeed, input.gas || carState.isNitroActive);
+
+            // 4. Movement Along Infinite Track
+            if (Math.abs(carState.speed) > 0.2) {
+                const dirSign = Math.sign(carState.speed);
+                carState.yaw += carState.steerAngle * dirSign * Math.min(1, Math.abs(carState.speed) / 8) * 1.8 * dt;
+                carState.yaw = Math.max(-0.85, Math.min(0.85, carState.yaw));
+            }
+
+            carState.x += Math.cos(carState.yaw) * carState.speed * dt;
+            carState.z -= Math.sin(carState.yaw) * carState.speed * dt;
+            carState.z = Math.max(-18, Math.min(18, carState.z));
+
+            // Auto Weather Transition every 450m
+            if (carState.x - carState.lastWeatherMilestone > 450) {
+                carState.lastWeatherMilestone = carState.x;
+                applyWeather(currentWeatherIndex + 1);
+            }
+
+            // 5. Infinite Chunk Recycler
+            chunks.forEach(chunk => {
+                // If car is far ahead of chunk end, shift chunk ahead
+                if (carState.x - (chunk.startX + CHUNK_LENGTH) > 200) {
+                    let maxX = chunk.startX;
+                    chunks.forEach(c => { maxX = Math.max(maxX, c.startX); });
+                    const newStartX = maxX + CHUNK_LENGTH;
+                    updateChunkGeometry(chunk, newStartX);
+                    populateCollectiblesAhead(newStartX, newStartX + CHUNK_LENGTH);
+                }
+            });
+
+            // 6. Raycast Heights
+            let avgWheelTerrainY = 0;
+            const cosY = Math.cos(carState.yaw);
+            const sinY = Math.sin(carState.yaw);
+
+            const wheelHeights = wheels.map(w => {
+                const wx = carState.x + w.baseX * cosY + w.baseZ * sinY;
+                const wz = carState.z - w.baseX * sinY + w.baseZ * cosY;
+                const gh = getTerrainHeight(wx, wz);
+                avgWheelTerrainY += gh;
+                return { wx, wz, gh };
+            });
+            avgWheelTerrainY /= 4;
+
+            const frontH = (wheelHeights[0].gh + wheelHeights[1].gh) * 0.5;
+            const rearH = (wheelHeights[2].gh + wheelHeights[3].gh) * 0.5;
+            const rightH = (wheelHeights[0].gh + wheelHeights[2].gh) * 0.5;
+            const leftH = (wheelHeights[1].gh + wheelHeights[3].gh) * 0.5;
+
+            const terrainPitch = Math.atan2(frontH - rearH, 2.84);
+            const terrainRoll = Math.atan2(leftH - rightH, 2.36);
+
+            // 7. Airborne Jumps & Stunts
+            const prevGroundY = carState.y;
+            if (carState.airborne) {
+                carState.vy -= 25.5 * dt;
+                carState.y += carState.vy * dt;
+                carState.airTime += dt;
+                carState.maxAirTime = Math.max(carState.maxAirTime, carState.airTime);
+
+                if (carState.y <= avgWheelTerrainY) {
+                    carState.y = avgWheelTerrainY;
+                    carState.suspensionVel = Math.max(-10, carState.vy * (0.6 / (1 + userState.upgrades.suspension * 0.1)));
+                    carState.vy = 0;
+                    carState.airborne = false;
+
+                    if (carState.airTime > 1.2) showStuntPopup('MEGA AIR!', 75);
+                    else if (carState.airTime > 0.6) showStuntPopup('AIR TIME!', 25);
+                    carState.airTime = 0;
+                }
+            } else {
+                const terrainDropRate = (avgWheelTerrainY - prevGroundY) / Math.max(0.001, dt);
+                if (terrainDropRate < -6.5 && Math.abs(carState.speed) > 16) {
+                    carState.airborne = true;
+                    carState.vy = Math.abs(carState.speed) * Math.sin(carState.pitch) * 0.65;
+                } else {
+                    carState.y = avgWheelTerrainY;
+                }
+            }
+
+            // Springs
+            const springAccel = -65.0 * carState.suspensionOffset - shockDamping * carState.suspensionVel;
+            carState.suspensionVel += springAccel * dt;
+            carState.suspensionOffset += carState.suspensionVel * dt;
+
+            const pitchDiff = terrainPitch - carState.pitch;
+            carState.pitchVel += (pitchDiff * 38.0 - carState.pitchVel * 7.5) * dt;
+            carState.pitch += carState.pitchVel * dt;
+
+            const rollDiff = terrainRoll - carState.roll;
+            carState.rollVel += (rollDiff * 40.0 - carState.rollVel * 8.2) * dt;
+            carState.roll += carState.rollVel * dt;
+
+            if (!carState.airborne && (Math.abs(carState.roll) > 1.75 || Math.abs(carState.pitch) > 1.85)) {
+                triggerGameOver('crash');
+                return;
+            }
+
+            if (carState.fuel <= 0 && Math.abs(carState.speed) < 0.25) {
+                triggerGameOver('fuel');
+                return;
+            }
+
+            // Transforms
+            carRoot.position.set(carState.x, carState.y, carState.z);
+            carRoot.rotation.set(0, carState.yaw, 0);
+
+            chassisGroup.position.y = carState.suspensionOffset;
+            chassisGroup.rotation.z = carState.pitch;
+            chassisGroup.rotation.x = carState.roll;
+
+            wheels.forEach((w, idx) => {
+                w.spinGroup.rotation.z -= (carState.speed * dt) / wheelRadius;
+                if (w.isFront) w.pivot.rotation.y = carState.steerAngle;
+
+                const localGroundDelta = carState.airborne ? -0.25 : (wheelHeights[idx].gh - carState.y);
+                w.pivot.position.y = wheelRadius + localGroundDelta * 0.75;
+
+                const topY = 1.35 + carState.suspensionOffset + (w.baseX * Math.sin(carState.pitch));
+                const bottomY = w.pivot.position.y;
+                const strutLen = Math.max(0.25, topY - bottomY);
+                w.spring.position.y = bottomY + strutLen * 0.5;
+                w.spring.scale.y = strutLen / 0.8;
+            });
+
+            // 8. Full Fuel Canisters & Coins Collision
+            collectibles.forEach(item => {
+                if (item.collected) return;
+                // Only check nearby items
+                if (Math.abs(item.baseX - carState.x) > 25) return;
+
+                item.mesh.rotation.y += dt * 2.5;
+                item.mesh.position.y = item.baseY + Math.sin(clock.elapsedTime * 3.5 + item.mesh.position.x) * 0.2;
+
+                const dx = item.mesh.position.x - carState.x;
+                const dz = item.mesh.position.z - carState.z;
+                if (dx * dx + dz * dz < 6.2) {
+                    item.collected = true;
+                    item.mesh.visible = false;
+                    if (item.type === 'coin') {
+                        audio.playCoin();
+                        carState.runCoins += 10;
+                        userState.coins += 10;
+                        persistState();
+                        updateWalletDisplays();
+                    } else if (item.type === 'fuel') {
+                        audio.playFuel();
+                        carState.fuel = 100;
+                        showStuntPopup('TANK FULL! +100% FUEL', 25);
+                    }
+                }
+            });
+
+            // 9. Camera Follow
+            const lookTarget = new THREE.Vector3(carState.x + 2.5, carState.y + 1.8, carState.z);
+            if (cameraMode === 0) {
+                const desired = new THREE.Vector3(carState.x + 3.0, carState.y + 5.2, carState.z + 18.0);
+                camera.position.lerp(desired, Math.min(1, dt * 6));
+                camera.lookAt(lookTarget);
+            } else if (cameraMode === 1) {
+                const chaseOffset = new THREE.Vector3(-11.5, 5.0, 0);
+                chaseOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), carState.yaw);
+                const desired = new THREE.Vector3(carState.x + chaseOffset.x, carState.y + chaseOffset.y, carState.z + chaseOffset.z);
+                camera.position.lerp(desired, Math.min(1, dt * 5.5));
+                camera.lookAt(new THREE.Vector3(carState.x + Math.cos(carState.yaw) * 6, carState.y + 1.6, carState.z - Math.sin(carState.yaw) * 6));
+            } else {
+                const hoodOffset = new THREE.Vector3(0.6, 2.3, 0);
+                hoodOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), carState.yaw);
+                camera.position.set(carState.x + hoodOffset.x, carState.y + hoodOffset.y, carState.z + hoodOffset.z);
+                camera.lookAt(new THREE.Vector3(carState.x + Math.cos(carState.yaw) * 12, carState.y + 1.5, carState.z - Math.sin(carState.yaw) * 12));
+            }
+
+            // 10. Weather Particles Follow Car
+            weatherParticleMesh.position.set(carState.x, carState.y, carState.z);
+            if (currentWeather.particles !== 'none') {
+                const pos = weatherParticleGeo.attributes.position.array;
+                const fallSpeed = (currentWeather.particles === 'rain') ? 35 : 12;
+                for (let i = 1; i < WEATHER_PARTICLE_COUNT * 3; i += 3) {
+                    pos[i] -= fallSpeed * dt;
+                    if (pos[i] < -10) pos[i] = 40;
+                }
+                weatherParticleGeo.attributes.position.needsUpdate = true;
+            }
+
+            // 11. HUD Telemetry
+            const speedKmh = Math.round(Math.abs(carState.speed) * 3.6);
+            uiSpeed.textContent = speedKmh;
+            speedMeterBar.style.width = `${Math.min(100, (speedKmh / 100) * 100)}%`;
+            updateGears(speedKmh, carState.isNitroActive);
+
+            const degPitch = Math.round((carState.pitch * 180) / Math.PI);
+            uiPitch.textContent = `${degPitch > 0 ? '+' : ''}${degPitch}°`;
+            inclineDisc.style.transform = `rotate(${-degPitch}deg)`;
+
+            uiFuel.textContent = `${Math.round(carState.fuel)}%`;
+            fuelGaugeFill.style.height = `${carState.fuel}%`;
+            if (carState.fuel < 20) {
+                fuelGaugeFill.classList.add('bg-rose-600');
+                fuelIcon.classList.add('text-rose-400');
+            } else {
+                fuelGaugeFill.classList.remove('bg-rose-600');
+                fuelIcon.classList.remove('text-rose-400');
+            }
+
+            uiNitro.textContent = `${Math.round(carState.nitro)}%`;
+            nitroGaugeFill.style.height = `${carState.nitro}%`;
+
+            updateRadar();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.05);
+            updatePhysics(dt);
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const w = isSimulatedLandscape ? window.innerHeight : window.innerWidth;
+            const h = isSimulatedLandscape ? window.innerWidth : window.innerHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        }
+
+        window.addEventListener('resize', onWindowResize);
+
+        window.onload = () => {
+            if (isSimulatedLandscape) {
+                document.body.classList.add('force-landscape');
+                onWindowResize();
+            }
+            setAppState(APP_STATES.HOME);
+            animate();
+        };
+    </script>
+</body>
+</html>
